@@ -9,37 +9,35 @@ from dataset_without_pytorch import get_loader
 
 
 
+def load_data(idx) :
+    data_flag = 'pneumoniamnist'
+    BATCH_SIZE = 4708
 
-data_flag = 'pneumoniamnist'
-download = True
+    info = INFO[data_flag]
+    DataClass = getattr(dataset_without_pytorch, info['python_class']);
 
-NUM_EPOCHS = 3
-BATCH_SIZE = 128
-lr = 0.001
+    train_dataset = DataClass(split='train', download=True) 
 
-info = INFO[data_flag]
-task = info['task']
-n_channels = info['n_channels']
-n_classes = len(info['label'])
+    train_loader = get_loader(dataset= train_dataset, batch_size=BATCH_SIZE)
 
-DataClass = getattr(dataset_without_pytorch, info['python_class'])
+    for x, y in train_loader :
+       x_train = x[idx * 2354 : (idx + 1) * 2354]
+       y_train = y[idx * 2354 : (idx + 1) * 2354]
+       break    
+    
+    test_dataset = DataClass(split='test', download=True) 
+    test_loader = get_loader(dataset= test_dataset, batch_size=BATCH_SIZE)
 
-# print (DataClass)
-# load the data
-train_dataset = DataClass(split='train', download=download) 
-# print(type(train_dataset), train_dataset)
+    for x, y in test_loader :
+       print(x.shape)
+       x_test = x[idx * 2354 : (idx + 1) * 2354]
+       y_test = y[idx * 2354 : (idx + 1) * 2354]
+       break
 
-# encapsulate data into dataloader form
-train_loader = get_loader(dataset=train_dataset, batch_size=BATCH_SIZE)
-# print(type(train_loader), train_loader)
-# print(train_dataset)
+    return (x_train, y_train), (x_test, y_test) 
+
+(x_train, y_train), (x_test, y_test)  = load_data(1)
 
 
-train_dataset.montage(length=20)
-print(train_loader)
+print(x_test.shape)
 
-# print(np.array(x).shape, y.shape)
-
-# for x, y in train_loader:
-#     print(x.shape, y.shape)
-#     break
