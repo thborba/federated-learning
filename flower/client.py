@@ -2,6 +2,8 @@ import argparse
 import os
 from pathlib import Path
 
+from medmnist import teste
+
 import tensorflow as tf
 
 import flwr as fl
@@ -78,7 +80,7 @@ def main() -> None:
 
     # Load and compile Keras model
     model = tf.keras.applications.EfficientNetB0(
-        input_shape=(32, 32, 3), weights=None, classes=10
+        input_shape=(28, 28, 1), weights=None, classes=2
     )
     model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
 
@@ -93,19 +95,9 @@ def main() -> None:
         client=client,
     )
 
-
 def load_partition(idx: int):
-    """Load 1/10th of the training and test data to simulate a partition."""
-    assert idx in range(10)
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-    return (
-        x_train[idx * 5000 : (idx + 1) * 5000],
-        y_train[idx * 5000 : (idx + 1) * 5000],
-    ), (
-        x_test[idx * 1000 : (idx + 1) * 1000],
-        y_test[idx * 1000 : (idx + 1) * 1000],
-    )
-
+    (x_train, y_train), (x_test, y_test) = teste.load_data(idx)
+    return (x_train.reshape(len(x_train), 28, 28, 1), tf.one_hot(y_train, 2)), (x_test.reshape(len(x_test), 28, 28, 1), tf.one_hot(y_test, 2)) 
 
 if __name__ == "__main__":
     main()
