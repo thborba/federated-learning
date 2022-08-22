@@ -1,56 +1,74 @@
 from typing import Dict, Optional, Tuple
-from pathlib import Path
-
+from keras import Sequential
+from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
 import flwr as fl
 import tensorflow as tf
+import utils
 
 
 def main() -> None:
-    # Load and compile model for
-    # 1. server-side parameter initialization
-    # 2. server-side parameter evaluation
-    model = tf.keras.applications.EfficientNetB0(
-        input_shape=(32, 32, 3), weights=None, classes=10
-    )
-    model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
+    ##model building
+    model = Sequential()
+    #convolutional layer with rectified linear unit activation
+    model.add(Conv2D(32, kernel_size=(3, 3),
+                    activation='relu',
+                    input_shape=(28, 28, 1)))
+    #32 convolution filters used each of size 3x3
+    #again
+    model.add(Conv2D(64, (3, 3), activation='relu'))
+    #64 convolution filters used each of size 3x3
+    #choose the best features via pooling
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    #randomly turn neurons on and off to improve convergence
+    model.add(Dropout(0.25))
+    #flatten since too many dimensions, we only want a classification output
+    model.add(Flatten())
+    #fully connected to get all relevant data
+    model.add(Dense(128, activation='relu'))
+    #one more dropout for convergence' sake :) 
+    model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile("adam", "binary_crossentropy", metrics=["accuracy"])
 
+
+    print(model.output_shape)
     # Create strategy
     strategy = fl.server.strategy.FedAvg(
         fraction_fit=0.2,
-        fraction_eval=0.2,
+        fraction_evaluate=0.2,
         min_fit_clients=2,
-        min_eval_clients=2,
+        min_evaluate_clients=2,
         min_available_clients=2,
-        eval_fn=get_eval_fn(model),
+        evaluate_fn=get_evaluate_fn(model),
         on_fit_config_fn=fit_config,
         on_evaluate_config_fn=evaluate_config,
-        initial_parameters=fl.common.weights_to_parameters(model.get_weights()),
+        initial_parameters=fl.common.ndarrays_to_parameters(model.get_weights()),
     )
 
     # Start Flower server (SSL-enabled) for four rounds of federated learning
     fl.server.start_server(
         server_address="0.0.0.0:8080",
-        config={"num_rounds": 4},
+        config=fl.server.ServerConfig(num_rounds=4),
         strategy=strategy,
     )
 
 
-def get_eval_fn(model):
+def get_evaluate_fn(model):
     """Return an evaluation function for server-side evaluation."""
+    (x_val, y_val) = utils.load_validation_data()
+    (x_val, y_val) = (x_val.reshape(len(x_val), 28, 28, 1), y_val) 
 
-    # Load data and model here to avoid the overhead of doing it in `evaluate` itself
-    (x_train, y_train), _ = tf.keras.datasets.cifar10.load_data()
-
-    # Use the last 5k training examples as a validation set
-    x_val, y_val = x_train[45000:50000], y_train[45000:50000]
-
+    print(x_val.shape, y_val.shape)
     # The `evaluate` function will be called after every round
     def evaluate(
-        weights: fl.common.Weights,
+        server_round: int,
+        parameters: fl.common.NDArrays,
+        config: Dict[str, fl.common.Scalar],
     ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
-        model.set_weights(weights)  # Update model with the latest parameters
+        model.set_weights(parameters)  # Update model with the latest parameters
         loss, accuracy = model.evaluate(x_val, y_val)
         return loss, {"accuracy": accuracy}
+
 
     return evaluate
 

@@ -2,11 +2,14 @@ import argparse
 import os
 from pathlib import Path
 
-from medmnist import teste
+import utils
 
 import tensorflow as tf
 
 import flwr as fl
+
+from keras import Sequential
+from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
 
 # Make TensorFlow logs less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -78,11 +81,27 @@ def main() -> None:
     parser.add_argument("--partition", type=int, choices=range(0, 10), required=True)
     args = parser.parse_args()
 
-    # Load and compile Keras model
-    model = tf.keras.applications.EfficientNetB0(
-        input_shape=(28, 28, 1), weights=None, classes=2
-    )
-    model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
+    model = Sequential()
+    #convolutional layer with rectified linear unit activation
+    model.add(Conv2D(32, kernel_size=(3, 3),
+                    activation='relu',
+                    input_shape=(28, 28, 1)))
+    #32 convolution filters used each of size 3x3
+    #again
+    model.add(Conv2D(64, (3, 3), activation='relu'))
+    #64 convolution filters used each of size 3x3
+    #choose the best features via pooling
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    #randomly turn neurons on and off to improve convergence
+    model.add(Dropout(0.25))
+    #flatten since too many dimensions, we only want a classification output
+    model.add(Flatten())
+    #fully connected to get all relevant data
+    model.add(Dense(128, activation='relu'))
+    #one more dropout for convergence' sake :) 
+    model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile("adam", "binary_crossentropy", metrics=["accuracy"])
 
     # Load a subset of CIFAR-10 to simulate the local data partition
     (x_train, y_train), (x_test, y_test) = load_partition(args.partition)
@@ -91,13 +110,13 @@ def main() -> None:
     client = CifarClient(model, x_train, y_train, x_test, y_test)
 
     fl.client.start_numpy_client(
-        server_address="10.182.0.7:8080",
+        server_address="localhost:8080",
         client=client,
     )
 
 def load_partition(idx: int):
-    (x_train, y_train), (x_test, y_test) = teste.load_data(idx)
-    return (x_train.reshape(len(x_train), 28, 28, 1), tf.one_hot(y_train, 2)), (x_test.reshape(len(x_test), 28, 28, 1), tf.one_hot(y_test, 2)) 
+    (x_train, y_train), (x_test, y_test) = utils.load_data(idx)
+    return (x_train.reshape(len(x_train), 28, 28, 1), y_train), (x_test.reshape(len(x_test), 28, 28, 1), y_test) 
 
 if __name__ == "__main__":
     main()
