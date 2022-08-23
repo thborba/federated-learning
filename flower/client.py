@@ -110,7 +110,7 @@ def main() -> None:
     client = CifarClient(model, x_train, y_train, x_test, y_test)
 
     fl.client.start_numpy_client(
-        server_address="localhost:8080",
+        server_address="10.182.0.7:8080",
         client=client,
     )
 
