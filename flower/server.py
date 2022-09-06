@@ -30,9 +30,6 @@ def main() -> None:
     model.add(Dense(1, activation='sigmoid'))
     model.compile("adam", "binary_crossentropy", metrics=["accuracy"])
 
-
-    print(model.output_shape)
-    # Create strategy
     strategy = fl.server.strategy.FedAvg(
         fraction_fit=0.2,
         fraction_evaluate=0.2,
@@ -45,7 +42,6 @@ def main() -> None:
         initial_parameters=fl.common.ndarrays_to_parameters(model.get_weights()),
     )
 
-    # Start Flower server (SSL-enabled) for four rounds of federated learning
     fl.server.start_server(
         server_address="0.0.0.0:8080",
         config=fl.server.ServerConfig(num_rounds=4),
@@ -58,7 +54,6 @@ def get_evaluate_fn(model):
     (x_val, y_val) = utils.load_validation_data()
     (x_val, y_val) = (x_val.reshape(len(x_val), 28, 28, 1), y_val) 
 
-    print(x_val.shape, y_val.shape)
     # The `evaluate` function will be called after every round
     def evaluate(
         server_round: int,
@@ -66,8 +61,9 @@ def get_evaluate_fn(model):
         config: Dict[str, fl.common.Scalar],
     ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
         model.set_weights(parameters)  # Update model with the latest parameters
+
         loss, accuracy = model.evaluate(x_val, y_val)
-        return loss, {"accuracy": accuracy}
+        return loss, {"valition_accuracy": accuracy}
 
 
     return evaluate
@@ -81,7 +77,7 @@ def fit_config(rnd: int):
     """
     config = {
         "batch_size": 32,
-        "local_epochs": 1 if rnd < 2 else 2,
+        "local_epochs": 1 if rnd < 2 else 4,
     }
     return config
 

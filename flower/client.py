@@ -16,7 +16,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
 # Define Flower client
-class CifarClient(fl.client.NumPyClient):
+class Client(fl.client.NumPyClient):
     def __init__(self, model, x_train, y_train, x_test, y_test):
         self.model = model
         self.x_train, self.y_train = x_train, y_train
@@ -72,7 +72,7 @@ class CifarClient(fl.client.NumPyClient):
         # Evaluate global model parameters on the local test data and return results
         loss, accuracy = self.model.evaluate(self.x_test, self.y_test, 32, steps=steps)
         num_examples_test = len(self.x_test)
-        return loss, num_examples_test, {"accuracy": accuracy}
+        return loss, num_examples_test, {"test_accuracy": accuracy}
 
 
 def main() -> None:
@@ -103,12 +103,10 @@ def main() -> None:
     model.add(Dense(1, activation='sigmoid'))
     model.compile("adam", "binary_crossentropy", metrics=["accuracy"])
 
-    # Load a subset of CIFAR-10 to simulate the local data partition
     (x_train, y_train), (x_test, y_test) = load_partition(args.partition)
 
-    # Start Flower client
-    client = CifarClient(model, x_train, y_train, x_test, y_test)
-
+    client = Client(model, x_train, y_train, x_test, y_test)
+    
     fl.client.start_numpy_client(
         server_address="10.182.0.7:8080",
         client=client,
