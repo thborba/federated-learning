@@ -21,9 +21,9 @@ def load_data(idx) :
     y_test = yt[idx * len(yt) // 2  : (idx + 1) * len(yt) // 2 ]
     return (x_train, y_train), (x_test, y_test)
 
-def load_validation_data():
-    validation_dataset = DataClass(split='val', download=True) 
-    x_val, y_val = get_loader(dataset= validation_dataset)
+def load_test_data():
+    test_dataset = DataClass(split='test', download=True) 
+    x_val, y_val = get_loader(dataset= test_dataset)
     print(x_val.shape, y_val.shape)
     return (x_val, y_val)
 

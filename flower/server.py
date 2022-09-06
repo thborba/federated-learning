@@ -51,8 +51,8 @@ def main() -> None:
 
 def get_evaluate_fn(model):
     """Return an evaluation function for server-side evaluation."""
-    (x_val, y_val) = utils.load_validation_data()
-    (x_val, y_val) = (x_val.reshape(len(x_val), 28, 28, 1), y_val) 
+    (x_test, y_test) = utils.load_test_data()
+    (x_test, y_test) = (x_test.reshape(len(x_test), 28, 28, 1), y_test) 
 
     # The `evaluate` function will be called after every round
     def evaluate(
@@ -62,8 +62,8 @@ def get_evaluate_fn(model):
     ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
         model.set_weights(parameters)  # Update model with the latest parameters
 
-        loss, accuracy = model.evaluate(x_val, y_val)
-        return loss, {"valition_accuracy": accuracy}
+        loss, accuracy = model.evaluate(x_test, y_test)
+        return loss, {"test_accuracy": accuracy}
 
 
     return evaluate
