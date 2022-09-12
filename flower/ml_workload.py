@@ -1,10 +1,6 @@
-from typing import Dict, Optional, Tuple
 from keras import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
-import flwr as fl
-import tensorflow as tf
 import utils
-
 
 def main() -> None:
     ##model building
@@ -30,9 +26,9 @@ def main() -> None:
     model.add(Dense(1, activation='sigmoid'))
     model.compile("adam", "binary_crossentropy", metrics=["accuracy"])
 
-    (x_train, y_train), (x_test, y_test) = load_partition()
+    (x_train, y_train), (x_test, y_test) = utils.load_data()
 
-    history = model.fit(
+    model.fit(
         x_train,
         y_train,
         batch_size=32,
@@ -41,11 +37,6 @@ def main() -> None:
     )
 
     loss, accuracy = model.evaluate(x_test, y_test)
-    print("test_accuracy", accuracy)
-
-
-def load_partition():
-    (x_train, y_train), (x_test, y_test) = utils.load_data(-1)
-    return (x_train.reshape(len(x_train), 28, 28, 1), y_train), (x_test.reshape(len(x_test), 28, 28, 1), y_test)
+    print("test_loss: ", loss, "test_accuracy", accuracy)
 
 main()
